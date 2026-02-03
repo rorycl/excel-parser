@@ -1,0 +1,52 @@
+---
+
+# log file location
+logFile: "output.log"
+
+# a list of Excel file format converters.
+converters:
+
+  #### an annotated entry ####
+
+  # The name of this converter
+  - name: "enthuse"
+
+    # A regular expression matcher for the header line
+    headerMatcher: "Source.*Date.*Type.*Payment ID.*Payment Amount"
+
+    # Columns to select from the header (the names must match exactly)
+    columns: 
+      - "Date"
+      - "Payment ID"
+      - "Payment Amount"
+      - "Supporter ID"
+      - "First Name"
+      - "Last Name"
+      - "Source"
+    # The additionalColumns headers will be written before the columns above.
+    additionalColumns:
+      - "File"
+
+    # The information to put in the additionalColumns.
+    # This uses Go templates or verbatim strings.
+    # Presently only the Filename is available in templates.
+    additionalData:
+      - "{{ .Filename }}"
+
+    #### another entry ####
+    
+  - name: "just giving"
+    headerMatcher: "Fundraiser User Id.*Fundraiser LastName.*Event Name.*Donor User Id.*Donation Ref.*Donation Date.*Donation Payment Reference.*Donation Amount"
+    columns:
+      - "Donation Date"
+      - "Donation Ref"
+      - "Donation Amount"
+      - "Donor User Id"
+      - "Donor FirstName"
+      - "Donor LastName"
+      - "Event Name"
+    additionalColumns:
+      - "File"
+    additionalData:
+      - "{{ .Filename }}"
+
