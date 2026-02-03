@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -25,8 +26,7 @@ func TestParser(t *testing.T) {
 
 	parser, err := NewParser(
 		"enthuse config",
-		`Source.*Date.*Type.*Payment ID.*Payment Amount`,
-		"enthuse",
+		regexp.MustCompile(`Source.*Date.*Type.*Payment ID.*Payment Amount`),
 		[]string{"Date", "Payment ID", "Payment Amount", "Supporter ID", "First Name", "Last Name", "Source"},
 		[]string{"File"},
 		[]string{"{{ .Filename }}"},

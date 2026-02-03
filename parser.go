@@ -21,7 +21,6 @@ import (
 type Parser struct {
 	Name                 string
 	HeaderMatch          *regexp.Regexp
-	Typer                string
 	Fields               []string
 	MandatoryDataHeaders []string // headers to write at the beginning of the output
 	MandatoryData        []string // data to write at the beginning of each output
@@ -32,10 +31,13 @@ type Parser struct {
 	debug                bool
 }
 
-func NewParser(name, headerMatch, typer string, fields, mdh, md []string, outputFile string) (*Parser, error) {
-	headerMatchRegexp, err := regexp.Compile(headerMatch)
-	if err != nil {
-		return nil, fmt.Errorf("new parser regexp compilation err: %w", err)
+func NewParser(name string, headerMatch *regexp.Regexp, fields, mdh, md []string, outputFile string) (*Parser, error) {
+	if name == "" {
+		return nil, errors.New("newparser received an empty name argument")
+	}
+
+	if outputFile == "" {
+		return nil, errors.New("newparser received an empty output file argument")
 	}
 
 	if got, want := len(mdh), len(md); got != want {
@@ -50,8 +52,7 @@ func NewParser(name, headerMatch, typer string, fields, mdh, md []string, output
 
 	p := &Parser{
 		Name:                 name,
-		HeaderMatch:          headerMatchRegexp,
-		Typer:                typer,
+		HeaderMatch:          headerMatch,
 		Fields:               fields,
 		MandatoryDataHeaders: mdh,
 		MandatoryData:        md,

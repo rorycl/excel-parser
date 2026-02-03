@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 )
 
 func main() {
 
 	parser, err := NewParser(
 		"enthuse config",
-		`Source.*Date.*Type.*Payment ID.*Payment Amount`,
-		"enthuse",
+		regexp.MustCompile(`Source.*Date.*Type.*Payment ID.*Payment Amount`),
 		[]string{"Date", "Payment ID", "Payment Amount", "Supporter ID", "First Name", "Last Name", "Source"},
 		[]string{"File"},
 		[]string{"{{ .Filename }}"},
@@ -30,8 +30,7 @@ func main() {
 
 	parser, err = NewParser(
 		"just giving config",
-		`Fundraiser User Id.*Fundraiser LastName.*Event Name.*Donor User Id.*Donation Ref.*Donation Date.*Donation Payment Reference.*Donation Amount`,
-		"just giving",
+		regexp.MustCompile(`Fundraiser User Id.*Fundraiser LastName.*Event Name.*Donor User Id.*Donation Ref.*Donation Date.*Donation Payment Reference.*Donation Amount`),
 		[]string{"Donation Date", "Donation Ref", "Donation Amount", "Donor User Id", "Donor FirstName", "Donor LastName", "Event Name"},
 		[]string{"File"},
 		[]string{"testdata/JustGiving 2025.12.15- £5105.03 anonymised.xlsx"},
