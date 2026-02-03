@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"slices"
@@ -28,6 +29,7 @@ type Parser struct {
 	positions            []int
 	headersWritten       bool
 	writer               *csv.Writer
+	debug                bool
 }
 
 func NewParser(name, headerMatch, typer string, fields, mdh, md []string, outputFile string) (*Parser, error) {
@@ -166,6 +168,14 @@ func (p *Parser) Flush() {
 	// _ = p.writer.Close()
 }
 
+// log is a debugging logger
+func (p *Parser) log(s string, a ...any) {
+	if !p.debug {
+		return
+	}
+	log.Printf(s, a...)
+}
+
 // Process writes filtered data from an Excel file to the writer, if found.
 func (p *Parser) Process(fileName string) error {
 
@@ -184,6 +194,7 @@ func (p *Parser) Process(fileName string) error {
 	// mapping the field names/column names to column positions, then writing out the
 	// wanted data, if needed.
 	for idx, sheetName := range f.GetSheetMap() {
+		p.log("sheet: %d : %s", idx, sheetName)
 		sheets++
 		rows, err := f.GetRows(sheetName)
 		if err != nil {
@@ -194,6 +205,7 @@ func (p *Parser) Process(fileName string) error {
 			continue
 		}
 		found = true
+		p.log("found header on %s", sheetName)
 
 		err = p.setColumnPositions(rows[headerRow])
 		if err != nil {
