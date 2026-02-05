@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -28,6 +29,7 @@ type Parser struct {
 	positions            []int
 	headersWritten       bool
 	writer               *csv.Writer
+	fileCloser           io.Closer
 	debug                bool
 }
 
@@ -57,6 +59,7 @@ func NewParser(name string, headerMatch *regexp.Regexp, fields, mdh, md []string
 		MandatoryDataHeaders: mdh,
 		MandatoryData:        md,
 		writer:               csvWriter,
+		fileCloser:           csvFile,
 	}
 
 	err = p.compileTemplates()
@@ -174,10 +177,15 @@ func (p *Parser) writeRow(row []string) error {
 	return p.writer.Write(row)
 }
 
-// Flush flushes the csv data to disk.
+// Flush flushes the csv data to disk and closes the underlying file.
 func (p *Parser) Flush() {
 	p.writer.Flush()
-	// _ = p.writer.Close()
+}
+
+// Close flushes the csv and closes the underlying file.
+func (p *Parser) Close() error {
+	p.Flush()
+	return p.fileCloser.Close()
 }
 
 // log is a debugging logger

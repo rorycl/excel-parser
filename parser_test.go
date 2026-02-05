@@ -45,7 +45,12 @@ func TestParser(t *testing.T) {
 	if err != nil {
 		t.Errorf("processing error: %v", err)
 	}
-	parser.Flush()
+
+	// Close and flush the parser.
+	err = parser.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// check the number of records written.
 	if got, want := recordCount, 3; got != want {

@@ -80,6 +80,10 @@ func (a *App) Run(yamlFile, converter, outputFile string, force bool, filePaths 
 		cvt.AdditionalData,
 		outputFile,
 	)
+	if err != nil {
+		return fmt.Errorf("could not setup new parser: %v", err)
+	}
+	defer parser.Close()
 
 	// Process each file, logging any errors.
 	a.log.Info("--------------------------------")
@@ -109,11 +113,18 @@ func (a *App) Run(yamlFile, converter, outputFile string, force bool, filePaths 
 		}
 		parser.Flush()
 	}
+
+	// Flush and close the csv file.
+	err = parser.Close()
+	if err != nil {
+		a.log.Warn(fmt.Sprintf("Output close/flush error: %v", err))
+	}
+
 	a.log.Info("--------------------------------")
 	a.log.Info(fmt.Sprintf("Completed processing in %s", time.Now().Sub(a.runStart)))
 	a.log.Info(fmt.Sprintf("File count %d error count %d", fileCount, errCount))
 	a.log.Info(fmt.Sprintf("Total record count %d", totalRecordCount))
-	a.log.Info(fmt.Sprintf("Output written to %s", outputFile))
+	a.log.Info(fmt.Sprintf("Output written to %q", outputFile))
 	a.log.Info("--------------------------------")
 
 	return nil
