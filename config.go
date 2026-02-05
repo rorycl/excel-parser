@@ -41,9 +41,9 @@ type Config struct {
 // GetConverter retrieves the named converter. If no converter is found, a nil is
 // returned.
 func (c *Config) GetConverter(name string) *Converter {
-	for _, converter := range c.Converters {
+	for i, converter := range c.Converters {
 		if converter.Name == name {
-			return &converter
+			return &c.Converters[i] // return pointer to original element
 		}
 	}
 	return nil
@@ -58,7 +58,8 @@ func (c *Config) validateConfig() error {
 	if len(c.Converters) == 0 {
 		return errors.New("no valid converters were found")
 	}
-	for _, conv := range c.Converters {
+	for i := range c.Converters {
+		conv := &c.Converters[i] // make conv a direct reference to the original.
 		if conv.Name == "" {
 			return fmt.Errorf("%q name is empty", conv.Name)
 		}

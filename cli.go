@@ -11,9 +11,9 @@ import (
 
 const (
 	ShortUsage      = "Process excel files into a summary csv file."
-	LongDescription = `This cli uses a configuration yaml file to laod
-   all of the Excel files listed on the command line or in the specified
-   directory into the specified csv file.`
+	LongDescription = `This cli program uses a configuration yaml file to load all of
+the Excel files listed on the command line and/or in the specified
+directories into the specified csv file.`
 )
 
 // Applicator provides the general interface to the program.
@@ -95,12 +95,11 @@ func BuildCLI(app Applicator) *cli.Command {
 				// c.Args(),
 				c.StringArgs("excelFiles")...,
 			)
-			return nil
 		},
 	}
 
 	// custom help template.
-	cmd.CustomRootCommandHelpTemplate = cmdHelpTemplate
+	// cmd.CustomRootCommandHelpTemplate = cmdHelpTemplate
 
 	return cmd
 }

@@ -27,6 +27,7 @@ type Parser struct {
 	mandatoryDataTpls    []*template.Template
 	positions            []int
 	headersWritten       bool
+	firstFileProcessed   bool
 	writer               *csv.Writer
 	debug                bool
 }
@@ -71,6 +72,9 @@ func NewParser(name string, headerMatch *regexp.Regexp, fields, mdh, md []string
 // sheet [][]string, returning -1 if no match was found, or the row number starting at 0
 // if it was. Each row's columns are joined by a space prior to match checking.
 func (p *Parser) searchSheetForHeader(allRows [][]string) int {
+	if allRows == nil {
+		return -1
+	}
 	for i, ar := range allRows {
 		if p.HeaderMatch.MatchString(strings.Join(ar, " ")) {
 			return i
@@ -80,9 +84,16 @@ func (p *Parser) searchSheetForHeader(allRows [][]string) int {
 }
 
 // setColumnPositions sets the positions of each column required for reporting in a
-// spreadsheet using header offset positions (from 0).
+// spreadsheet using header offset positions (from 0). Only the first file in a set is
+// used for the column position setting; the assumption is that all the files have the
+// same structure.
 func (p *Parser) setColumnPositions(headers []string) error {
+	if p.firstFileProcessed {
+		return nil
+	}
+	p.firstFileProcessed = true
 	seen := map[string]bool{}
+
 	for _, f := range p.Fields {
 		for i, h := range headers {
 			if h == f {
@@ -201,6 +212,9 @@ func (p *Parser) Process(fileName string) error {
 		if err != nil {
 			return fmt.Errorf("could not get rows for %q, sheet %q (%d): %v", fileName, sheetName, idx, err)
 		}
+		if len(rows) < 1 {
+			continue
+		}
 		headerRow := p.searchSheetForHeader(rows)
 		if headerRow == -1 {
 			continue
@@ -216,6 +230,9 @@ func (p *Parser) Process(fileName string) error {
 		for i, row := range rows[headerRow:] {
 			fRow, err := p.filterRow(row, i == 0, data)
 			if err != nil {
+				if errors.Is(err, ErrHeaderAlreadyWritten) { // header already written by previous file.
+					continue
+				}
 				return fmt.Errorf("file %q sheet %q (%d) row %v filter error: %v", fileName, sheetName, idx, row, err)
 			}
 			err = p.writeRow(fRow)
