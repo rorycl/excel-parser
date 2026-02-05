@@ -65,7 +65,7 @@ func TestParseFiles(t *testing.T) {
 				t.Errorf("expected err %q", tt.Err.Error())
 			}
 			if diff := cmp.Diff(paths, tt.expected); diff != "" {
-				fmt.Errorf("unexpected path results error:\n%s", diff)
+				t.Errorf("unexpected path results error:\n%s", diff)
 			}
 		})
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -64,7 +63,7 @@ func TestApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got, want := len(bytes.Split(contents, []byte("\n"))), 10; got != want {
-		fmt.Errorf("got %d lines want %d", got, want)
+		t.Errorf("got %d lines want %d", got, want)
 	}
 	// fmt.Println(string(contents))
 

@@ -104,6 +104,7 @@ func BuildCLI(app Applicator) *cli.Command {
 	return cmd
 }
 
+/*
 var cmdHelpTemplate = `NAME:
    {{.Name}} - {{.Usage}}
 
@@ -118,3 +119,4 @@ COMMANDS:
 {{end}}
 Run '{{.Name}} [command] --help' for more information on a command.
 `
+*/
