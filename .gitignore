@@ -1,2 +1,5 @@
 # gitignore
 excel-parser
+
+# binaries
+bin
