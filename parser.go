@@ -27,7 +27,6 @@ type Parser struct {
 	mandatoryDataTpls    []*template.Template
 	positions            []int
 	headersWritten       bool
-	firstFileProcessed   bool
 	writer               *csv.Writer
 	debug                bool
 }
@@ -84,19 +83,20 @@ func (p *Parser) searchSheetForHeader(allRows [][]string) int {
 }
 
 // setColumnPositions sets the positions of each column required for reporting in a
-// spreadsheet using header offset positions (from 0). Only the first file in a set is
-// used for the column position setting; the assumption is that all the files have the
-// same structure.
+// spreadsheet using header offset positions (from 0). Each file regenerates the header
+// positions to allow for files that have had temporary working columns inserted.
+// To get to this point in the program, the Excel sheet in question has to have passed
+// the HeaderMatch matcher.
 func (p *Parser) setColumnPositions(headers []string) error {
-	if p.firstFileProcessed {
-		return nil
-	}
-	p.firstFileProcessed = true
-	seen := map[string]bool{}
 
+	// Reset positions.
+	p.positions = []int{}
+
+	seen := map[string]bool{}
 	for _, f := range p.Fields {
 		for i, h := range headers {
 			if h == f {
+				// Ignore any duplicate headers.
 				if _, ok := seen[f]; ok {
 					continue
 				}
@@ -188,16 +188,20 @@ func (p *Parser) log(s string, a ...any) {
 	log.Printf(s, a...)
 }
 
-// Process writes filtered data from an Excel file to the writer, if found.
-func (p *Parser) Process(fileName string) error {
-
-	f, err := excelize.OpenFile(fileName)
-	if err != nil {
-		return fmt.Errorf("open %q error: %v", fileName, err)
-	}
+// Process writes filtered data from an Excel file to the writer, if found. The method
+// returns the number of records and an error, if any.
+func (p *Parser) Process(fileName string) (int, error) {
 
 	var found bool
 	var sheets int
+	var recordCount int
+
+	f, err := excelize.OpenFile(fileName)
+	if err != nil {
+		return recordCount, fmt.Errorf("open %q error: %v", fileName, err)
+	}
+
+	// data is for providing to templates.
 	data := map[string]any{
 		"Filename": fileName,
 	}
@@ -206,11 +210,13 @@ func (p *Parser) Process(fileName string) error {
 	// mapping the field names/column names to column positions, then writing out the
 	// wanted data, if needed.
 	for idx, sheetName := range f.GetSheetMap() {
+
 		p.log("sheet: %d : %s", idx, sheetName)
 		sheets++
+
 		rows, err := f.GetRows(sheetName)
 		if err != nil {
-			return fmt.Errorf("could not get rows for %q, sheet %q (%d): %v", fileName, sheetName, idx, err)
+			return recordCount, fmt.Errorf("could not get rows for %q, sheet %q (%d): %v", fileName, sheetName, idx, err)
 		}
 		if len(rows) < 1 {
 			continue
@@ -224,7 +230,7 @@ func (p *Parser) Process(fileName string) error {
 
 		err = p.setColumnPositions(rows[headerRow])
 		if err != nil {
-			return fmt.Errorf("file %q sheet %q (%d) header row error: %v", fileName, sheetName, idx, err)
+			return recordCount, fmt.Errorf("file %q sheet %q (%d) header row error: %v", fileName, sheetName, idx, err)
 		}
 
 		for i, row := range rows[headerRow:] {
@@ -233,19 +239,23 @@ func (p *Parser) Process(fileName string) error {
 				if errors.Is(err, ErrHeaderAlreadyWritten) { // header already written by previous file.
 					continue
 				}
-				return fmt.Errorf("file %q sheet %q (%d) row %v filter error: %v", fileName, sheetName, idx, row, err)
+				return recordCount, fmt.Errorf("file %q sheet %q (%d) row %v filter error: %v", fileName, sheetName, idx, row, err)
 			}
 			err = p.writeRow(fRow)
 			if err != nil {
-				return fmt.Errorf("file %q sheet %q (%d) row %v write error: %v", fileName, sheetName, idx, row, err)
+				return recordCount, fmt.Errorf("file %q sheet %q (%d) row %v write error: %v", fileName, sheetName, idx, row, err)
+			}
+			// Ignore the header for record counting.
+			if i != 0 {
+				recordCount++
 			}
 		}
 		break
 	}
 
 	if !found {
-		return fmt.Errorf("no headers found in the %d sheets in %q", sheets, fileName)
+		return recordCount, fmt.Errorf("no headers found in the %d sheets in %q", sheets, fileName)
 	}
 
-	return nil
+	return recordCount, nil
 }

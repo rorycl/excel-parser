@@ -41,11 +41,16 @@ func TestParser(t *testing.T) {
 
 	inFile := "testdata/enthuse_bad_first_sheet.xlsx"
 
-	err = parser.Process(inFile)
+	recordCount, err := parser.Process(inFile)
 	if err != nil {
 		t.Errorf("processing error: %v", err)
 	}
 	parser.Flush()
+
+	// check the number of records written.
+	if got, want := recordCount, 3; got != want {
+		t.Errorf("expected %d got %d records", got, want)
+	}
 
 	// check the output
 	b, err := os.ReadFile(tempFile.Name())
