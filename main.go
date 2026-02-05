@@ -9,7 +9,7 @@ import (
 func main() {
 
 	ctx := context.Background()
-	app := NewApp()
+	app := NewApp(os.Stdout)
 	cmd := BuildCLI(app)
 	if err := cmd.Run(ctx, os.Args); err != nil {
 		fmt.Printf("error: %v\n", err)

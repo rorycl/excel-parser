@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -15,10 +16,13 @@ type App struct {
 }
 
 // NewApp initialises a new App.
-func NewApp() *App {
+func NewApp(logTarget io.Writer) *App {
+	if logTarget == nil {
+		logTarget = os.Stdout
+	}
 	return &App{
 		runStart: time.Now(),
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		log:      slog.New(slog.NewTextHandler(logTarget, nil)),
 	}
 }
 
@@ -82,26 +86,34 @@ func (a *App) Run(yamlFile, converter, outputFile string, force bool, filePaths 
 	a.log.Info(fmt.Sprintf("Started processing: %s", a.runStart.Format(time.RFC3339)))
 	a.log.Info("--------------------------------")
 
-	var count int
+	var fileCount int
 	var errCount int
+	var totalRecordCount int
+
 	for i, file := range *filepaths {
 		if i > 0 {
 			a.log.Info("--------------------------------")
 		}
 		a.log.Info(fmt.Sprintf("Processing file %02d: %s", i+1, file))
-		count++
+		fileCount++
 
-		err := parser.Process(file)
+		recordCount, err := parser.Process(file)
 		if err != nil {
 			a.log.Warn(fmt.Sprintf("  error: %v", err))
 			errCount++
+			a.log.Info("  process error")
+		} else {
+			totalRecordCount += recordCount
+			a.log.Info(fmt.Sprintf("  %d records found", recordCount))
+			a.log.Info("  processed ok")
 		}
-		a.log.Info("  processed ok")
 		parser.Flush()
 	}
 	a.log.Info("--------------------------------")
 	a.log.Info(fmt.Sprintf("Completed processing in %s", time.Now().Sub(a.runStart)))
-	a.log.Info(fmt.Sprintf("File count %d error count %d", count, errCount))
+	a.log.Info(fmt.Sprintf("File count %d error count %d", fileCount, errCount))
+	a.log.Info(fmt.Sprintf("Total record count %d", totalRecordCount))
+	a.log.Info(fmt.Sprintf("Output written to %s", outputFile))
 	a.log.Info("--------------------------------")
 
 	return nil
