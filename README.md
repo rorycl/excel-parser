@@ -1,7 +1,11 @@
 # excel-parser
 
 A command line program for parsing Excel files and extracting the
-desired columns to a csv file.
+desired columns from sheets matching a header "recipe". The recipe and
+column definitions are defined in a yaml file.
+
+The parser can extract columns from sheets with arbitrarily inserted
+columns, so long as the header recipe regexp still matches.
 
 ## Run
 
