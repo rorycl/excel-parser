@@ -64,9 +64,21 @@ func TestParseFiles(t *testing.T) {
 			if err == nil && tt.Err != nil {
 				t.Errorf("expected err %q", tt.Err.Error())
 			}
-			if diff := cmp.Diff(paths, tt.expected); diff != "" {
+			if diff := cmp.Diff(filesToStringSlice(paths), tt.expected); diff != "" {
 				t.Errorf("unexpected path results error:\n%s", diff)
 			}
 		})
 	}
+}
+
+func filesToStringSlice(files *Files) []string {
+	if files == nil {
+		return []string{}
+	}
+	s := make([]string, len(*files))
+	copy(s, *files)
+	// for i, f := range *files {
+	// 	s[i] = f
+	// }
+	return s
 }
