@@ -5,28 +5,40 @@ desired columns from sheets matching a header "recipe". The recipe and
 column definitions are defined in a yaml file. Additional columns
 can be added.
 
-The parser can extract columns from sheets with arbitrarily inserted
-columns, so long as the header recipe regexp still matches.
+The program is best suited to extracting and transforming data from
+rigid format Excel files, such as those recording payment data on
+platforms such as JustGiving or Enthuse. The anonymised examples in
+`testdata` are from these providers.
 
-Columns may be added using "additionalColumns" and "additionalData"
-in the yaml file. The `additionalData fields` can use either verbatim strings
-or Go templates, the latter utilising either the special field 
-`{{ .Filename }}` or the name of a column header in the original data.
-Note that column header names have spaces removed and are Title cased,
-so the header ` donation date ` becomes referrable as 
-`{{ .DonationDate }}`.
+Several different converters can be defined in the same yaml file. The
+example `config_example.yaml` provides two, one each for JustGiving and
+Enthuse.
+
+## Usage
+
+The parser can extract columns from sheets with arbitrarily inserted
+columns, so long as the header recipe regexp still matches the header
+line.
+
+Columns may be added using `additionalColumns` and `additionalData` for
+any particular converter in  the yaml file. The `additionalData` fields
+can be defined using either verbatim strings or Go templates, the latter
+utilising either the special field `{{ .Filename }}` or the name of a
+column header in the original data. Note that column header names have
+spaces removed and are Title cased, so the header ` donation date `
+becomes referrable as `{{.DonationDate}}` in Go template syntax.
 
 Two template funcs are provided for the additional data fields:
 
 * TimestampParseAndFormat  
   Example:  
-  `ABC-{{ "2026-09-01 09:01" | TimestampParseAndFormat "2006-01-02 15:04" "02/01/2006" }}`
+  `ABC-{{ "2026-09-01 09:01" | TimestampParseAndFormat "2006-01-02 15:04" "02/01/2006" }}`  
   returns:  
   `ABC-01/09/2026`
 
-* RegexpReplace
-  Example: 
-  `{{ "<please replace me>" | RegexReplace "(replace.*me)" "fix" }}`
+* RegexpReplace  
+  Example:  
+  `{{ "<please replace me>" | RegexReplace "(replace.*me)" "fix" }}`  
   returns:  
   `<please fix>`
 
