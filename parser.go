@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -22,11 +23,12 @@ import (
 type Parser struct {
 	Name                 string
 	HeaderMatch          *regexp.Regexp
+	originalHeaders      []string
 	Fields               []string
+	positions            []int    // position of the Fields in the originalHeaders
 	MandatoryDataHeaders []string // headers to write at the beginning of the output
 	MandatoryData        []string // data to write at the beginning of each output
 	mandatoryDataTpls    []*template.Template
-	positions            []int
 	headersWritten       bool
 	writer               *csv.Writer
 	fileCloser           io.Closer
@@ -92,6 +94,9 @@ func (p *Parser) searchSheetForHeader(allRows [][]string) int {
 // the HeaderMatch matcher.
 func (p *Parser) setColumnPositions(headers []string) error {
 
+	// Reset the original header.
+	p.originalHeaders = headers
+
 	// Reset positions.
 	p.positions = []int{}
 
@@ -114,6 +119,14 @@ func (p *Parser) setColumnPositions(headers []string) error {
 	return nil
 }
 
+// funcMapper prepares a template.FuncMap
+func (p *Parser) funcMapper() template.FuncMap {
+	return template.FuncMap{
+		"RegexpReplace":           tplRegexpReplace,
+		"TimestampParseAndFormat": tplTimestampParseAndFormat,
+	}
+}
+
 // compileTemplates compiles the mandatoryDataTpls from the MandatoryData, if any.
 func (p *Parser) compileTemplates() error {
 	if len(p.MandatoryData) < 1 {
@@ -122,7 +135,9 @@ func (p *Parser) compileTemplates() error {
 	p.mandatoryDataTpls = make([]*template.Template, len(p.MandatoryData))
 	var err error
 	for i, md := range p.MandatoryData {
-		p.mandatoryDataTpls[i], err = template.New(fmt.Sprintf("%d", i)).Parse(md)
+		tpl := template.New(fmt.Sprintf("%d", i))
+		tpl.Funcs(p.funcMapper()) // add the funcMap
+		p.mandatoryDataTpls[i], err = tpl.Parse(md)
 		if err != nil {
 			return fmt.Errorf("could not parse template %q", md)
 		}
@@ -134,8 +149,10 @@ func (p *Parser) compileTemplates() error {
 // error and should be caught by the user and the row skipped for writing.
 var ErrHeaderAlreadyWritten error = errors.New("header already written")
 
-// filterRow filters a row of Excel data based on the parser configuration recipe,
-func (p *Parser) filterRow(row []string, header bool, data any) ([]string, error) {
+// filterRow filters a row of Excel data based on the parser configuration recipe, Note
+// that data on a per-sheet basis is provided and then added into if templated
+// "mandatory data" is provided to add each cell of data named by the column header.
+func (p *Parser) filterRow(row []string, header bool, data map[string]any) ([]string, error) {
 	if len(p.positions) < 1 {
 		return nil, errors.New("filterRow called without positions being initialised")
 	}
@@ -156,12 +173,27 @@ func (p *Parser) filterRow(row []string, header bool, data any) ([]string, error
 		if header {
 			return slices.Concat(p.MandatoryDataHeaders, filteredRow), nil
 		}
-		// Replace any templated
+		// Replace any templated fields after first copying and then filling the
+		// template data with data from the input rows using the original headers and
+		// all row data as applicable.
+		// Important note: data fields need to be exported (i.e. capitalised) and have
+		// any spaces removed -- as a crude requirement for a template key.
+		localData := data
+		for i, originalHeaderName := range p.originalHeaders {
+			field := fieldNameForTemplate(originalHeaderName)
+			var cell string
+			if i > len(row)-1 {
+				cell = ""
+			} else {
+				cell = row[i]
+			}
+			localData[field] = cell
+		}
 		var err error
 		mdh := make([]string, len(p.mandatoryDataTpls))
 		for i, tpl := range p.mandatoryDataTpls {
 			var b bytes.Buffer
-			err = tpl.Execute(&b, data)
+			err = tpl.Execute(&b, localData)
 			if err != nil {
 				return nil, fmt.Errorf("template execution error, offset %d, err: %v", i, err)
 			}
@@ -266,4 +298,45 @@ func (p *Parser) Process(fileName string) (int, error) {
 	}
 
 	return recordCount, nil
+}
+
+// fieldNameForTemplate removes spaces from a field and makes the first char of a string
+// a capital.
+func fieldNameForTemplate(s string) string {
+	if len(s) < 1 {
+		return s
+	}
+	s = strings.TrimSpace(s)
+	s = strings.Title(s)
+	return strings.ReplaceAll(s, " ", "")
+}
+
+// tplRegexpReplace is a Go text/template template function.
+// Example invocation:
+//
+//	"<please replace me> | RegexpReplace "<(.*replace.*)>" "fixed"
+//	output: "<fixed>".
+func tplRegexpReplace(pattern, replacement, input string) string {
+	rgp, err := regexp.Compile(pattern)
+	if err != nil {
+		// panic with contextual info rather than use MustCompile
+		panic(fmt.Sprintf("tplRegexReplace regexp compile error for %q: %v", pattern, err))
+	}
+	z := rgp.ReplaceAllString(input, replacement)
+	return z
+}
+
+// tplTimestampParseAndFormat is a Go text/template template function.
+// Example invocation:
+//
+//	"2026-09-01 09:01" | TimestampParseAndFormat "2006-01-02 15:04" "02/01/2006"
+//	output: "01/09/2026"
+//
+// The func returns the original input string if it was not possible to parse.
+func tplTimestampParseAndFormat(parseLayout, outputFormat, input string) string {
+	parsedTime, err := time.Parse(parseLayout, input)
+	if err != nil {
+		return input
+	}
+	return parsedTime.Format(outputFormat)
 }
