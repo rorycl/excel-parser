@@ -26,12 +26,15 @@ converters:
     # The additionalColumns headers will be written before the columns above.
     additionalColumns:
       - "File"
+      - "Reference"
 
     # The information to put in the additionalColumns.
     # This uses Go templates or verbatim strings.
-    # Presently only the Filename is available in templates.
+    # The Filename is available in templates, together with the data in each row
+    # accessible by the column name (with spaces removed and Title cased).
     additionalData:
       - "{{ .Filename }}"
+      - 'ENTH-{{ .Date | TimestampParseAndFormat "02/01/2006 15:04" "20060102" }}'
 
     #### another entry ####
     
@@ -47,6 +50,8 @@ converters:
       - "Event Name"
     additionalColumns:
       - "File"
+      - "Reference"
     additionalData:
       - "{{ .Filename }}"
+      - 'JG-{{ .DonationDate | TimestampParseAndFormat "02/01/2006" "20060102" }}'
 
