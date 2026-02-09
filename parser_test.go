@@ -129,3 +129,21 @@ func TestTplFuncRegexpReplace(t *testing.T) {
 		t.Errorf("got %q want %q", got, want)
 	}
 }
+
+// TestTplFuncRegexpReplace tests the template function tplRegexpReplace.
+func TestTplFuncRegexpReplace2(t *testing.T) {
+	tpl := template.New("test")
+	tpl.Funcs(template.FuncMap{"RegexReplace": tplRegexpReplace})
+	tpl, err := tpl.Parse(`{{ . | RegexReplace "(replace.*me)" "fix" }}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b bytes.Buffer
+	err = tpl.Execute(&b, "<please replace me>")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := b.String(), "<please fix>"; got != want {
+		t.Errorf("got %q want %q", got, want)
+	}
+}

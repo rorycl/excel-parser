@@ -10,8 +10,19 @@ import (
 
 func TestApp(t *testing.T) {
 
+	var ephemeralTestDir = true
+
 	// Setup test directory and log file.
-	testDir := t.TempDir()
+	var testDir string
+	var err error
+	if ephemeralTestDir {
+		testDir = t.TempDir()
+	} else {
+		testDir, err = os.MkdirTemp("/tmp/", "testapp_*")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	logFile, err := os.CreateTemp(testDir, "log_*.log")
 	if err != nil {
 		t.Fatal(err)
@@ -62,7 +73,7 @@ func TestApp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := len(bytes.Split(contents, []byte("\n"))), 10; got != want {
+	if got, want := len(bytes.Split(contents, []byte("\n"))), 11; got != want {
 		t.Errorf("got %d lines want %d", got, want)
 	}
 	// fmt.Println(string(contents))
@@ -77,10 +88,12 @@ func TestApp(t *testing.T) {
 		t.Fatal(err)
 	}
 	/* output is something like the following
-	time=2026-02-05T18:41:03.081Z level=INFO msg="Completed processing in 7.94035ms"
-	time=2026-02-05T18:41:03.081Z level=INFO msg="File count 4 error count 1"
-	time=2026-02-05T18:41:03.081Z level=INFO msg="Total record count 9"
-	time=2026-02-05T18:41:03.081Z level=INFO msg="Output written to /tmp/TestApp3211766467/001/output.csv"
+	time=2026-02-09T11:43:13.830Z level=INFO msg=--------------------------------
+	time=2026-02-09T11:43:13.830Z level=INFO msg="Completed processing in 7.434675ms"
+	time=2026-02-09T11:43:13.830Z level=INFO msg="File count 5 error count 2"
+	time=2026-02-09T11:43:13.830Z level=INFO msg="Total record count 9"
+	time=2026-02-09T11:43:13.830Z level=INFO msg="Output written to \"/tmp/testapp_375922856/output.csv\""
+	time=2026-02-09T11:43:13.830Z level=INFO msg=--------------------------------
 	*/
 	wanted := [][]byte{
 		[]byte("File count 4 error count 1"),

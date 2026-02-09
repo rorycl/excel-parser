@@ -84,14 +84,6 @@ func (a *App) Run(yamlFile, converter, outputFile string, force bool, filePaths 
 		return fmt.Errorf("could not setup new parser: %v", err)
 	}
 
-	// Flush and close the parser on exit.
-	defer func() {
-		err := parser.Close()
-		if err != nil {
-			a.log.Warn(fmt.Sprintf("parser csv file flush/close error: %v", err))
-		}
-	}()
-
 	// Process each file, logging any errors.
 	a.log.Info("--------------------------------")
 	a.log.Info(fmt.Sprintf("Started processing: %s", a.runStart.Format(time.RFC3339)))
