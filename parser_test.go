@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"os"
 	"regexp"
 	"testing"
+	"text/template"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -52,11 +53,6 @@ func runParser(t *testing.T, inputExcelFile, tmpFile string, parser *Parser, exp
 	if err != nil {
 		t.Fatalf("could not read file %q: err %v", tmpFile, err)
 	}
-	fmt.Println("got here ok")
-	fmt.Println("parser output")
-	fmt.Println(string(b))
-	fmt.Println("expected output")
-	fmt.Println(expectedOutput[1:])
 	// slice off the leading "\n" of the expectedOutput.
 	if diff := cmp.Diff(string(b), expectedOutput[1:]); diff != "" {
 		t.Errorf("got unexpected diff:\n%s", diff)
@@ -109,8 +105,27 @@ func TestParserForJustGiving(t *testing.T) {
 	runParser(t, "testdata/justgiving_example.xlsx", tempFile.Name(), parser, 2, testJustGivingParserOutput)
 }
 
+// TestFieldNameForTemplate tests field name capitalisation for use as template keys.
 func TestFieldNameForTemplate(t *testing.T) {
 	if got, want := fieldNameForTemplate(" donation date "), "DonationDate"; got != want {
-		fmt.Errorf("test field name got %q want %q", got, want)
+		t.Errorf("test field name got %q want %q", got, want)
+	}
+}
+
+// TestTplFuncRegexpReplace tests the template function tplRegexpReplace.
+func TestTplFuncRegexpReplace(t *testing.T) {
+	tpl := template.New("test")
+	tpl.Funcs(template.FuncMap{"RegexReplace": tplRegexpReplace})
+	tpl, err := tpl.Parse(`Dialogue: {{ . | RegexReplace "^(hello).*" "${1} young chap" }}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b bytes.Buffer
+	err = tpl.Execute(&b, "hello old man")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := b.String(), "Dialogue: hello young chap"; got != want {
+		t.Errorf("got %q want %q", got, want)
 	}
 }

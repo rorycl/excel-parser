@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/xuri/excelize/v2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Parser provides a way of checking if a sheet in an Excel file matches the expected
@@ -303,11 +305,12 @@ func (p *Parser) Process(fileName string) (int, error) {
 // fieldNameForTemplate removes spaces from a field and makes the first char of a string
 // a capital.
 func fieldNameForTemplate(s string) string {
+	s = strings.TrimSpace(s)
 	if len(s) < 1 {
 		return s
 	}
-	s = strings.TrimSpace(s)
-	s = strings.Title(s)
+	caser := cases.Title(language.English)
+	s = caser.String(s)
 	return strings.ReplaceAll(s, " ", "")
 }
 
