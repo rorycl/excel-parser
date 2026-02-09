@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"regexp"
 	"testing"
@@ -114,36 +115,50 @@ func TestFieldNameForTemplate(t *testing.T) {
 
 // TestTplFuncRegexpReplace tests the template function tplRegexpReplace.
 func TestTplFuncRegexpReplace(t *testing.T) {
-	tpl := template.New("test")
-	tpl.Funcs(template.FuncMap{"RegexReplace": tplRegexpReplace})
-	tpl, err := tpl.Parse(`Dialogue: {{ . | RegexReplace "^(hello).*" "${1} young chap" }}`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var b bytes.Buffer
-	err = tpl.Execute(&b, "hello old man")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, want := b.String(), "Dialogue: hello young chap"; got != want {
-		t.Errorf("got %q want %q", got, want)
-	}
-}
 
-// TestTplFuncRegexpReplace tests the template function tplRegexpReplace.
-func TestTplFuncRegexpReplace2(t *testing.T) {
-	tpl := template.New("test")
-	tpl.Funcs(template.FuncMap{"RegexReplace": tplRegexpReplace})
-	tpl, err := tpl.Parse(`{{ . | RegexReplace "(replace.*me)" "fix" }}`)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name      string
+		tplString string
+		input     string
+		expected  string
+	}{
+		{
+			name:      "hello",
+			tplString: `Dialogue: {{ . | RegexReplace "^(hello).*" "${1} young chap" }}`,
+			input:     `hello old man`,
+			expected:  `Dialogue: hello young chap`,
+		},
+		{
+			name:      "fix",
+			tplString: `{{ . | RegexReplace "(replace.*me)" "fix" }}`,
+			input:     `<please replace me>`,
+			expected:  `<please fix>`,
+		},
+		{
+			name:      "filename",
+			tplString: `ENTH-{{ . | RegexReplace ".*([0-9]{4}).([0-9]{2}).([0-9]{2}).*" "${1}${2}${3}" }}`,
+			input:     `Enthuse\Enthuse - 2026.01.20 - 466.22.xlsx`,
+			expected:  `ENTH-20260120`,
+		},
 	}
-	var b bytes.Buffer
-	err = tpl.Execute(&b, "<please replace me>")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, want := b.String(), "<please fix>"; got != want {
-		t.Errorf("got %q want %q", got, want)
+
+	for ii, tt := range tests {
+		t.Run(fmt.Sprintf("%d_%s", ii, tt.name), func(t *testing.T) {
+			tpl := template.New("test")
+			tpl.Funcs(template.FuncMap{"RegexReplace": tplRegexpReplace})
+			tpl, err := tpl.Parse(tt.tplString)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b bytes.Buffer
+			err = tpl.Execute(&b, tt.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, want := b.String(), tt.expected; got != want {
+				t.Errorf("got %q want %q", got, want)
+			}
+
+		})
 	}
 }
